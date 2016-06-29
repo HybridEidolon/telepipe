@@ -8,9 +8,12 @@ use byteorder::{LittleEndian as LE, ReadBytesExt, WriteBytesExt};
 
 pub mod common;
 
+use self::common::*;
+
 #[derive(Clone, Debug)]
 pub enum Msg {
-    Unknown(u8, u8, Vec<u8>)
+    Unknown(u8, u8, Vec<u8>),
+    Welcome(u8, Welcome)
 }
 
 impl Serial for Msg {
@@ -20,6 +23,11 @@ impl Serial for Msg {
         let mut cursor = Cursor::new(Vec::new());
 
         match self {
+            &Msg::Welcome(ref f, ref pl) => {
+                code = 0x02;
+                flags = *f;
+                try!(pl.serialize(&mut cursor));
+            },
             &Msg::Unknown(ref c, ref f, ref b) => {
                 code = *c;
                 flags = *f;
@@ -47,7 +55,8 @@ impl Serial for Msg {
         try!(r.read_exact(&mut buf));
 
         let ret = match code {
-            _ => Msg::Unknown(code, flags, buf)
+            0x02 => Msg::Welcome(flags, try!(Serial::deserialize(&mut Cursor::new(buf)))),
+            _    => Msg::Unknown(code, flags, buf)
         };
 
         Ok(ret)

@@ -38,3 +38,12 @@ fn test_msg_serial_padding() {
     let buf: Vec<u8> = cursor.into_inner();
     assert_eq!(buf.len(), 28);
 }
+
+#[test]
+fn test_welcome_size() {
+    let msg = Msg::Welcome(0, Default::default());
+    let mut cursor = Cursor::new(Vec::new());
+    msg.serialize(&mut cursor).unwrap();
+    let buf: Vec<u8> = cursor.into_inner();
+    assert_eq!(buf.len(), 0x004C);
+}
