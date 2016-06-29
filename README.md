@@ -1,5 +1,7 @@
 # PSOGC telepipe
 
+[![Build Status](https://travis-ci.org/BygoneWorlds/telepipe.svg?branch=master)](https://travis-ci.org/BygoneWorlds/telepipe)
+
 A proxy for _Phantasy Star Online_ games for the GameCube.
 
 ## Compiling
