@@ -1,7 +1,7 @@
 # PSOGC telepipe
 
 [![Travis Build Status](https://travis-ci.org/BygoneWorlds/telepipe.svg?branch=master)](https://travis-ci.org/BygoneWorlds/telepipe)
-[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/BygoneWorlds/telepipe?svg=true)](https://appveyor.com/project/Furyhunter/telepipe)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/BygoneWorlds/telepipe?svg=true)](https://ci.appveyor.com/project/Furyhunter/telepipe)
 
 A proxy for _Phantasy Star Online_ games for the GameCube.
 
