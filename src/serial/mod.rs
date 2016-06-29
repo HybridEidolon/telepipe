@@ -3,7 +3,7 @@
 use std::io;
 use std::io::{Read, Write};
 
-use byteorder::{BigEndian as BE, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian as LE, ReadBytesExt, WriteBytesExt};
 
 pub mod util;
 
@@ -15,7 +15,7 @@ pub trait Serial: Sized {
     fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error>;
 }
 
-// NOTE: We're using Big Endian here because that's how the PSO streams are.
+// NOTE: We're using Little Endian here because that's how the PSO streams are.
 
 impl Serial for u8 {
     #[inline(always)]
@@ -47,12 +47,12 @@ impl Serial for i8 {
 impl Serial for u16 {
     #[inline(always)]
     fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error> {
-        try!(write.write_u16::<BE>(*self));
+        try!(write.write_u16::<LE>(*self));
         Ok(())
     }
     #[inline(always)]
     fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error> {
-        let v = try!(read.read_u16::<BE>());
+        let v = try!(read.read_u16::<LE>());
         Ok(v)
     }
 }
@@ -60,12 +60,12 @@ impl Serial for u16 {
 impl Serial for i16 {
     #[inline(always)]
     fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error> {
-        try!(write.write_i16::<BE>(*self));
+        try!(write.write_i16::<LE>(*self));
         Ok(())
     }
     #[inline(always)]
     fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error> {
-        let v = try!(read.read_i16::<BE>());
+        let v = try!(read.read_i16::<LE>());
         Ok(v)
     }
 }
@@ -73,12 +73,12 @@ impl Serial for i16 {
 impl Serial for u32 {
     #[inline(always)]
     fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error> {
-        try!(write.write_u32::<BE>(*self));
+        try!(write.write_u32::<LE>(*self));
         Ok(())
     }
     #[inline(always)]
     fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error> {
-        let v = try!(read.read_u32::<BE>());
+        let v = try!(read.read_u32::<LE>());
         Ok(v)
     }
 }
@@ -86,12 +86,12 @@ impl Serial for u32 {
 impl Serial for i32 {
     #[inline(always)]
     fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error> {
-        try!(write.write_i32::<BE>(*self));
+        try!(write.write_i32::<LE>(*self));
         Ok(())
     }
     #[inline(always)]
     fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error> {
-        let v = try!(read.read_i32::<BE>());
+        let v = try!(read.read_i32::<LE>());
         Ok(v)
     }
 }
@@ -99,12 +99,12 @@ impl Serial for i32 {
 impl Serial for u64 {
     #[inline(always)]
     fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error> {
-        try!(write.write_u64::<BE>(*self));
+        try!(write.write_u64::<LE>(*self));
         Ok(())
     }
     #[inline(always)]
     fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error> {
-        let v = try!(read.read_u64::<BE>());
+        let v = try!(read.read_u64::<LE>());
         Ok(v)
     }
 }
@@ -112,12 +112,12 @@ impl Serial for u64 {
 impl Serial for i64 {
     #[inline(always)]
     fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error> {
-        try!(write.write_i64::<BE>(*self));
+        try!(write.write_i64::<LE>(*self));
         Ok(())
     }
     #[inline(always)]
     fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error> {
-        let v = try!(read.read_i64::<BE>());
+        let v = try!(read.read_i64::<LE>());
         Ok(v)
     }
 }
@@ -134,3 +134,6 @@ impl Serial for bool {
         Ok(v != 0)
     }
 }
+
+#[cfg(test)]
+mod test;

@@ -4,7 +4,7 @@ use std::io;
 use std::io::{Read, Write, Cursor};
 use serial::Serial;
 
-use byteorder::{BigEndian as BE, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian as LE, ReadBytesExt, WriteBytesExt};
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -31,7 +31,7 @@ impl Serial for Msg {
 
         try!(w.write_u8(code));
         try!(w.write_u8(flags));
-        try!(w.write_u16::<BE>(round_up(buf.len() as u16, 4)));
+        try!(w.write_u16::<LE>(round_up(buf.len() as u16, 4)));
         try!(w.write_all(&buf));
 
         Ok(())
@@ -40,7 +40,7 @@ impl Serial for Msg {
     fn deserialize<R: Read>(mut r: R) -> Result<Msg, io::Error> {
         let code = try!(r.read_u8());
         let flags = try!(r.read_u8());
-        let size = try!(r.read_u16::<BE>());
+        let size = try!(r.read_u16::<LE>());
         let mut buf: Vec<u8> = vec![0; size as usize];
         try!(r.read_exact(&mut buf));
 
