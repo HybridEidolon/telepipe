@@ -23,7 +23,7 @@ fn init_log_config() {
     }
 }
 
-fn dns_thread(mut socket: DnsSocket) {
+fn dns_thread(socket: DnsSocket) {
     info!("DNS thread live");
     let mut buf = vec![0; MESSAGE_LIMIT];
     loop {
@@ -36,7 +36,7 @@ fn dns_thread(mut socket: DnsSocket) {
                 mm.header.qr = Qr::Response;
                 mm.header;
                 let mut resource = Resource::new("gc01.st-pso.games.sega.net".to_string(), RecordType::A, Class::Internet, 59);
-                resource.write_rdata(&record::A { address: Ipv4Addr::new(192, 168, 150, 1) });
+                resource.write_rdata(&record::A { address: Ipv4Addr::new(192, 168, 150, 1) }).unwrap();
                 mm.answer = vec![resource.clone()];
                 mm.authority = vec![resource.clone()];
                 mm.header.recursion_available = false;
@@ -52,7 +52,7 @@ fn dns_thread(mut socket: DnsSocket) {
     }
 }
 
-fn tcp_listener_thread(mut listener: TcpListener) {
+fn tcp_listener_thread(listener: TcpListener) {
     let port = listener.local_addr().unwrap().port();
     info!("TCP listener thread live on port {:?}", port);
 
@@ -104,6 +104,19 @@ fn main() {
     });
 
     let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9002").unwrap()).unwrap();
+
+    thread::spawn(move || {
+        tcp_listener_thread(listener);
+    });
+
+    // Episodes 1 & 2 ports
+    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9100").unwrap()).unwrap();
+
+    thread::spawn(move || {
+        tcp_listener_thread(listener);
+    });
+
+    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9001").unwrap()).unwrap();
 
     thread::spawn(move || {
         tcp_listener_thread(listener);
