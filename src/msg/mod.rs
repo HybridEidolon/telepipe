@@ -13,7 +13,9 @@ use self::common::*;
 #[derive(Clone, Debug)]
 pub enum Msg {
     Unknown(u8, u8, Vec<u8>),
-    Welcome(u8, Welcome)
+    Welcome(u8, Welcome),
+    Redirect4(Redirect4),
+    Redirect6(Redirect6)
 }
 
 impl Serial for Msg {
@@ -28,20 +30,31 @@ impl Serial for Msg {
                 flags = *f;
                 try!(pl.serialize(&mut cursor));
             },
+            &Msg::Redirect4(ref r) => {
+                code = 0x19;
+                flags = 0;
+                try!(r.serialize(&mut cursor));
+            },
+            &Msg::Redirect6(ref r) => {
+                code = 0x19;
+                flags = 6;
+                try!(r.serialize(&mut cursor));
+            }
             &Msg::Unknown(ref c, ref f, ref b) => {
                 code = *c;
                 flags = *f;
                 try!(cursor.write_all(b));
-            }
+            },
+            //_ => unimplemented!()
         }
 
         let mut buf: Vec<u8> = cursor.into_inner();
-        let buf_len = buf.len();
+        let buf_len = buf.len() + 4;
         buf.append(&mut vec![0; round_up_remainder(buf_len as u16, 4) as usize]);
 
         try!(w.write_u8(code));
         try!(w.write_u8(flags));
-        try!(w.write_u16::<LE>(round_up(buf.len() as u16, 4)));
+        try!(w.write_u16::<LE>(round_up(buf_len as u16, 4)));
         try!(w.write_all(&buf));
 
         Ok(())
@@ -56,6 +69,13 @@ impl Serial for Msg {
 
         let ret = match code {
             0x02 => Msg::Welcome(flags, try!(Serial::deserialize(&mut Cursor::new(buf)))),
+            0x19 => {
+                if flags == 6 {
+                    Msg::Redirect6(try!(Serial::deserialize(&mut Cursor::new(buf))))
+                } else {
+                    Msg::Redirect4(try!(Serial::deserialize(&mut Cursor::new(buf))))
+                }
+            }
             _    => Msg::Unknown(code, flags, buf)
         };
 
