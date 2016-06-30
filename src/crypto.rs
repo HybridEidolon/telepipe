@@ -1,11 +1,25 @@
 //! PSO GameCube's cryptography functions.
 
+const NUM_KEYS: usize = 520;
+
 /// An instance of a PSOGC cipher.
-pub struct Cipher;
+pub struct Cipher {
+    pos: u32,
+    keys: Vec<u32>,
+    seed: u32
+}
 
 impl Cipher {
-    pub fn new(_seed: &[u8]) -> Cipher {
-        Cipher
+    pub fn new(seed: u32) -> Cipher {
+        let mut ret = Cipher {
+            pos: 0,
+            keys: vec![0; NUM_KEYS],
+            seed: seed
+        };
+
+        ret.initialize();
+
+        ret
     }
 
     /// Use the cipher over the given buffer, mutating in-place, and updating
@@ -17,8 +31,123 @@ impl Cipher {
         if buf.len() == 0 {
             return Ok(())
         }
-        unimplemented!()
+
+        let mut wordbuf: &mut [u32] = unsafe {
+            use std::mem;
+            use std::slice;
+
+            let buf_len = buf.len();
+            let buf_ptr: *mut u32 = mem::transmute(buf.as_mut_ptr());
+            slice::from_raw_parts_mut(buf_ptr, buf_len / 4)
+        };
+
+        for w in wordbuf.iter_mut() {
+            *w = self.encode_word(*w);
+        }
+
+        Ok(())
     }
+
+    pub fn encode_word(&mut self, v: u32) -> u32 {
+        v ^ le_u32(self.next_key())
+    }
+
+    fn initialize(&mut self) {
+        use std::num::Wrapping as W;
+
+        let mut base_key: u32 = 0;
+        let mut source1: usize;
+        let mut source2: usize;
+        let mut source3: usize;
+
+        let mut seed = self.seed;
+
+        for _ in 0..17 {
+            for _ in 0..32 {
+                seed = (W(seed) * W(0x5D588B65)).0;
+                base_key = base_key >> 1;
+                seed = (W(seed) + W(1)).0;
+                base_key = if seed & 0x80000000 != 0 {
+                    base_key | 0x80000000
+                } else {
+                    base_key & 0x7FFFFFFF
+                };
+            }
+            self.keys[self.pos as usize] = base_key;
+            self.pos += 1;
+        }
+        source1 = 0;
+        source2 = 1;
+        self.pos -= 1;
+        self.keys[self.pos as usize] = (((W(self.keys[0]) >> 9) ^ (W(self.pos) << 23)) ^ W(self.keys[15])).0;
+        source3 = self.pos as usize;
+        self.pos += 1;
+        while self.pos < NUM_KEYS as u32 {
+            self.keys[self.pos as usize] = (W(self.keys[source3]) ^ (((W(self.keys[source1]) << 32) & W(0xFF800000)) ^ ((W(self.keys[source2]) >> 9) & W(0x007FFFFF)))).0;
+            self.pos += 1;
+            source1 += 1;
+            source2 += 1;
+            source3 += 1;
+        }
+        self.mix();
+        self.mix();
+        self.mix();
+        self.pos = NUM_KEYS as u32 - 1;
+    }
+
+    fn mix(&mut self) {
+        let mut r0: u32;
+        let mut r4: u32;
+        let mut r5: usize;
+        let mut r6: usize;
+        let mut r7: usize;
+
+        self.pos = 0;
+        r5 = 0;
+        r6 = 489; // POSSIBLY WRONG
+        r7 = 0;
+
+        while r6 < NUM_KEYS {
+            r0 = self.keys[r6];
+            r6 += 1;
+            r4 = self.keys[r5];
+            r0 ^= r4;
+            self.keys[r5] = r0;
+            r5 += 1;
+        }
+
+        while r5 < NUM_KEYS {
+            r0 = self.keys[r7];
+            r7 += 1;
+            r4 = self.keys[r5];
+            r0 ^= r4;
+            self.keys[r5] = r0;
+            r5 += 1;
+        }
+    }
+
+    pub fn next_key(&mut self) -> u32 {
+        self.pos += 1;
+        if self.pos == NUM_KEYS as u32 {
+            self.mix();
+        }
+        self.keys[self.pos as usize]
+    }
+}
+
+#[cfg(target_endian = "little")]
+#[inline(always)]
+fn le_u32(v: u32) -> u32 {
+    v
+}
+
+#[cfg(target_endian = "big")]
+#[inline(always)]
+fn le_u32(v: u32) -> u32 {
+    ((v & 0xFF) << 24)
+        + ((v & 0xFF00) << 8)
+        + ((v & 0xFF0000) >> 16)
+        + ((v & 0xFF000000) >> 24)
 }
 
 /// An error in Cipher::codec.
@@ -34,10 +163,11 @@ mod test {
 
     #[test]
     fn test_codec_illegal_size() {
-        let seed = Vec::new();
-        let mut cipher = Cipher::new(&seed);
+        let seed = 512;
+        let mut cipher = Cipher::new(seed);
 
         assert_eq!(cipher.codec(&mut vec![0; 3]), Err(CodecError::IllegalBufferSize));
         assert_eq!(cipher.codec(&mut Vec::new()), Ok(()));
+        assert_eq!(cipher.codec(&mut vec![0; 512]), Ok(()));
     }
 }
