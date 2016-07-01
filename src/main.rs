@@ -7,6 +7,7 @@ extern crate resolve;
 pub mod serial;
 pub mod msg;
 pub mod crypto;
+pub mod client;
 
 use std::net::{TcpListener, Ipv4Addr};
 use std::thread;
