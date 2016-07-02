@@ -83,17 +83,15 @@ impl Serial for Msg {
     }
 }
 
+/// Round up a value to a multiple of `of`.
 #[inline(always)]
-fn round_up(val: u16, of: u16) -> u16 {
-    if val % of == 0 {
-        val
-    } else {
-        val + of
-    }
+pub fn round_up(val: u16, of: u16) -> u16 {
+    val + round_up_remainder(val, of)
 }
 
+/// Get the amount required to round up a value to a multiple of `of`.
 #[inline(always)]
-fn round_up_remainder(val: u16, of: u16) -> u16 {
+pub fn round_up_remainder(val: u16, of: u16) -> u16 {
     if val % of == 0 {
         0
     } else {
