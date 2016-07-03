@@ -1,6 +1,6 @@
 //! PSO GameCube's cryptography functions.
 
-const NUM_KEYS: usize = 521;
+const NUM_KEYS: usize = 528;
 
 /// An instance of a PSOGC cipher.
 pub struct Cipher {
@@ -18,8 +18,25 @@ impl Cipher {
         };
 
         ret.initialize();
+        ret.print_keys();
 
         ret
+    }
+
+    fn print_keys(&self) {
+        println!("ZERO");
+        println!("### ###+0000 ###+0001 ###+0002 ###+0003 ###+0004 ###+0005 ###+0006 ###+0007");
+        for x in 0..66 {
+            println!("{:03} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X}", x*8,
+                     self.keys[x*8 + 0],
+                     self.keys[x*8 + 1],
+                     self.keys[x*8 + 2],
+                     self.keys[x*8 + 3],
+                     self.keys[x*8 + 4],
+                     self.keys[x*8 + 5],
+                     self.keys[x*8 + 6],
+                     self.keys[x*8 + 7]);
+        }
     }
 
     /// Use the cipher over the given buffer, mutating in-place, and updating
@@ -82,11 +99,22 @@ impl Cipher {
         source1 = 0;
         source2 = 1;
         self.pos -= 1;
-        self.keys[self.pos] = (((W(self.keys[0]) >> 9) ^ (W(self.keys[self.pos]) << 23)) ^ W(self.keys[15])).0;
+        let r = (((W(self.keys[0]) >> 9) ^ (W(self.keys[self.pos]) << 23)) ^ W(self.keys[15])).0;
+        self.keys[self.pos] = r;
         source3 = self.pos;
         self.pos += 1;
         while self.pos != 521 {
-            self.keys[self.pos] = (W(self.keys[source3]) ^ (((W(self.keys[source1]) << 23) ^ W(0xFF800000)) ^ ((W(self.keys[source2]) >> 9) & W(0x007FFFFF)))).0;
+            // fight me IRL, I am not wasting another 6 hours cleaning this up
+            let term1 = W(self.keys[source3]);
+            let term2 = W(self.keys[source1]);
+            let term3 = W(self.keys[source2]);
+            let term4 = term1 << 23;
+            let term5 = term4 ^ W(0xFF800000);
+            let term6 = term3 & W(0x007FFFFF);
+            let term7 = term5 ^ term6;
+            let term8 = term1 ^ term7;
+            let r = term8.0;
+            self.keys[self.pos] = r;
             self.pos += 1;
             source1 += 1;
             source2 += 1;
