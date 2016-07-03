@@ -195,7 +195,7 @@ fn read_thread(side: Side,
 
     loop {
         // Read the header.
-        debug!("Reading header");
+        debug!("{:?} side Reading header", side);
         if let Err(e) = stream.read_exact(&mut header_buf[..4]) {
             error!("Unable to read header from {:?} read stream: {}", side, e);
             break;

@@ -1,10 +1,10 @@
 //! PSO GameCube's cryptography functions.
 
-const NUM_KEYS: usize = 520;
+const NUM_KEYS: usize = 521;
 
 /// An instance of a PSOGC cipher.
 pub struct Cipher {
-    pos: u32,
+    pos: usize,
     keys: Vec<u32>,
     seed: u32
 }
@@ -44,7 +44,7 @@ impl Cipher {
         };
 
         for w in wordbuf.iter_mut() {
-            let key = self.next_key().to_le();
+            let key = self.next_key();
             *w = *w ^ key;
         }
 
@@ -76,17 +76,17 @@ impl Cipher {
                     base_key & 0x7FFFFFFF
                 };
             }
-            self.keys[self.pos as usize] = base_key;
+            self.keys[self.pos] = base_key;
             self.pos += 1;
         }
         source1 = 0;
         source2 = 1;
         self.pos -= 1;
-        self.keys[self.pos as usize] = (((W(self.keys[0]) >> 9) ^ (W(self.keys[self.pos as usize]) << 23)) ^ W(self.keys[15])).0;
-        source3 = self.pos as usize;
+        self.keys[self.pos] = (((W(self.keys[0]) >> 9) ^ (W(self.keys[self.pos]) << 23)) ^ W(self.keys[15])).0;
+        source3 = self.pos;
         self.pos += 1;
-        while self.pos < NUM_KEYS as u32 {
-            self.keys[self.pos as usize] = (W(self.keys[source3]) ^ (((W(self.keys[source1]) << 23) ^ W(0xFF800000)) ^ ((W(self.keys[source2]) >> 9) & W(0x007FFFFF)))).0;
+        while self.pos != 521 {
+            self.keys[self.pos] = (W(self.keys[source3]) ^ (((W(self.keys[source1]) << 23) ^ W(0xFF800000)) ^ ((W(self.keys[source2]) >> 9) & W(0x007FFFFF)))).0;
             self.pos += 1;
             source1 += 1;
             source2 += 1;
@@ -95,7 +95,7 @@ impl Cipher {
         self.mix();
         self.mix();
         self.mix();
-        self.pos = NUM_KEYS as u32;
+        self.pos = 520;
     }
 
     fn mix(&mut self) {
@@ -110,7 +110,7 @@ impl Cipher {
         r6 = 489;
         r7 = 0;
 
-        while r6 < NUM_KEYS {
+        while r6 != 521 {
             r0 = self.keys[r6];
             r6 += 1;
             r4 = self.keys[r5];
@@ -119,7 +119,7 @@ impl Cipher {
             r5 += 1;
         }
 
-        while r5 < NUM_KEYS {
+        while r5 != 521 {
             r0 = self.keys[r7];
             r7 += 1;
             r4 = self.keys[r5];
@@ -131,10 +131,10 @@ impl Cipher {
 
     pub fn next_key(&mut self) -> u32 {
         self.pos += 1;
-        if self.pos >= NUM_KEYS as u32 {
+        if self.pos == 521 {
             self.mix();
         }
-        self.keys[self.pos as usize].to_le()
+        self.keys[self.pos].to_le()
     }
 }
 
