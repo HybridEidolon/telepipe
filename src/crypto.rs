@@ -18,25 +18,8 @@ impl Cipher {
         };
 
         ret.initialize();
-        ret.print_keys();
 
         ret
-    }
-
-    fn print_keys(&self) {
-        println!("ZERO");
-        println!("### ###+0000 ###+0001 ###+0002 ###+0003 ###+0004 ###+0005 ###+0006 ###+0007");
-        for x in 0..66 {
-            println!("{:03} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X} {:08X}", x*8,
-                     self.keys[x*8 + 0],
-                     self.keys[x*8 + 1],
-                     self.keys[x*8 + 2],
-                     self.keys[x*8 + 3],
-                     self.keys[x*8 + 4],
-                     self.keys[x*8 + 5],
-                     self.keys[x*8 + 6],
-                     self.keys[x*8 + 7]);
-        }
     }
 
     /// Use the cipher over the given buffer, mutating in-place, and updating
@@ -52,12 +35,9 @@ impl Cipher {
         debug!("Codecing {} words", buf.len() / 4);
 
         let mut wordbuf: &mut [u32] = unsafe {
-            use std::mem;
             use std::slice;
 
-            let buf_len = buf.len();
-            let buf_ptr: *mut u32 = mem::transmute(buf.as_mut_ptr());
-            slice::from_raw_parts_mut(buf_ptr, buf_len / 4)
+            slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut u32, buf.len() / 4)
         };
 
         for w in wordbuf.iter_mut() {
