@@ -16,11 +16,13 @@ use resolve::{DnsSocket, MESSAGE_LIMIT, Message as DnsMsg, Resource, RecordType,
 use resolve::record;
 use resolve::message::Qr;
 
+use client::Session;
+
 fn init_log_config() {
     let r = std::env::var("RUST_LOG");
     match r {
         Ok(ref s) if s != "" => (),
-        _ => std::env::set_var("RUST_LOG", "info")
+        _ => std::env::set_var("RUST_LOG", "debug")
     }
 }
 
@@ -60,7 +62,18 @@ fn tcp_listener_thread(listener: TcpListener) {
     for s in listener.incoming() {
         match s {
             Ok(s) => {
-                info!("Connected {:?} on port {:?}, but this is stubbed so GAME OVER.", s.peer_addr(), port);
+                use std::str::FromStr;
+                use std::net::SocketAddr;
+
+                info!("Connected {:?} on port {:?}.", s.peer_addr(), port);
+                let addr = format!("74.59.188.106:{}", port);
+                let addr = <SocketAddr as FromStr>::from_str(&addr).unwrap();
+                let session: Session = Session::new(s, addr).unwrap();
+                thread::spawn(move|| {
+                    use client::Run;
+                    info!("Session spawned.");
+                    session.run();
+                });
             }
             Err(_) => {
                 error!("Error in TCP listener");

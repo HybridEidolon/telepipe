@@ -32,6 +32,8 @@ impl Cipher {
             return Ok(())
         }
 
+        debug!("Codecing {} words", buf.len() / 4);
+
         let mut wordbuf: &mut [u32] = unsafe {
             use std::mem;
             use std::slice;
@@ -42,14 +44,15 @@ impl Cipher {
         };
 
         for w in wordbuf.iter_mut() {
-            *w = self.encode_word(*w);
+            let key = self.next_key().to_le();
+            *w = *w ^ key;
         }
 
         Ok(())
     }
 
     pub fn encode_word(&mut self, v: u32) -> u32 {
-        v ^ le_u32(self.next_key())
+        v ^ self.next_key()
     }
 
     fn initialize(&mut self) {
@@ -79,11 +82,11 @@ impl Cipher {
         source1 = 0;
         source2 = 1;
         self.pos -= 1;
-        self.keys[self.pos as usize] = (((W(self.keys[0]) >> 9) ^ (W(self.pos) << 23)) ^ W(self.keys[15])).0;
+        self.keys[self.pos as usize] = (((W(self.keys[0]) >> 9) ^ (W(self.keys[self.pos as usize]) << 23)) ^ W(self.keys[15])).0;
         source3 = self.pos as usize;
         self.pos += 1;
         while self.pos < NUM_KEYS as u32 {
-            self.keys[self.pos as usize] = (W(self.keys[source3]) ^ (((W(self.keys[source1]) << 32) & W(0xFF800000)) ^ ((W(self.keys[source2]) >> 9) & W(0x007FFFFF)))).0;
+            self.keys[self.pos as usize] = (W(self.keys[source3]) ^ (((W(self.keys[source1]) << 23) ^ W(0xFF800000)) ^ ((W(self.keys[source2]) >> 9) & W(0x007FFFFF)))).0;
             self.pos += 1;
             source1 += 1;
             source2 += 1;
@@ -92,7 +95,7 @@ impl Cipher {
         self.mix();
         self.mix();
         self.mix();
-        self.pos = NUM_KEYS as u32 - 1;
+        self.pos = NUM_KEYS as u32;
     }
 
     fn mix(&mut self) {
@@ -104,7 +107,7 @@ impl Cipher {
 
         self.pos = 0;
         r5 = 0;
-        r6 = 489; // POSSIBLY WRONG
+        r6 = 489;
         r7 = 0;
 
         while r6 < NUM_KEYS {
@@ -128,26 +131,11 @@ impl Cipher {
 
     pub fn next_key(&mut self) -> u32 {
         self.pos += 1;
-        if self.pos == NUM_KEYS as u32 {
+        if self.pos >= NUM_KEYS as u32 {
             self.mix();
         }
-        self.keys[self.pos as usize]
+        self.keys[self.pos as usize].to_le()
     }
-}
-
-#[cfg(target_endian = "little")]
-#[inline(always)]
-fn le_u32(v: u32) -> u32 {
-    v
-}
-
-#[cfg(target_endian = "big")]
-#[inline(always)]
-fn le_u32(v: u32) -> u32 {
-    ((v & 0xFF) << 24)
-        + ((v & 0xFF00) << 8)
-        + ((v & 0xFF0000) >> 16)
-        + ((v & 0xFF000000) >> 24)
 }
 
 /// An error in Cipher::codec.

@@ -7,8 +7,11 @@ use byteorder::{LittleEndian as LE, BigEndian as BE, ReadBytesExt, WriteBytesExt
 use serial::*;
 use serial::util::*;
 
-pub static WELCOME_COPYRIGHT: &'static str =
+pub static LOGIN_WELCOME_COPYRIGHT: &'static str =
     "DreamCast Port Map. Copyright SEGA Enterprises. 1999";
+
+pub static SHIP_WELCOME_COPYRIGHT: &'static str =
+    "DreamCast Lobby Server. Copyright SEGA Enterprises. 1999";
 
 #[derive(Clone, Debug)]
 pub struct Welcome {
@@ -20,7 +23,7 @@ pub struct Welcome {
 impl Default for Welcome {
     fn default() -> Welcome {
         Welcome {
-            copyright: WELCOME_COPYRIGHT.to_string(),
+            copyright: SHIP_WELCOME_COPYRIGHT.to_string(),
             server_seed: 0,
             client_seed: 0
         }
