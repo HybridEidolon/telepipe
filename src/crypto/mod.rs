@@ -2,7 +2,11 @@
 
 const NUM_KEYS: usize = 528;
 
+#[cfg(test)]
+mod test;
+
 /// An instance of a PSOGC cipher.
+#[derive(Clone, Debug)]
 pub struct Cipher {
     pos: usize,
     keys: Vec<u32>,
@@ -17,10 +21,14 @@ impl Cipher {
             seed: seed
         };
 
+        info!("Initial seed: {}", seed);
+
         ret.initialize();
 
         ret
     }
+
+    pub fn seed(&self) -> u32 { self.seed }
 
     /// Use the cipher over the given buffer, mutating in-place, and updating
     /// the cipher state in the process. buf must be a multiple of 4.
@@ -151,19 +159,4 @@ impl Cipher {
 pub enum CodecError {
     /// The buffer given was either size 0 or not a multiple of 4.
     IllegalBufferSize
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn test_codec_illegal_size() {
-        let seed = 512;
-        let mut cipher = Cipher::new(seed);
-
-        assert_eq!(cipher.codec(&mut vec![0; 3]), Err(CodecError::IllegalBufferSize));
-        assert_eq!(cipher.codec(&mut Vec::new()), Ok(()));
-        assert_eq!(cipher.codec(&mut vec![0; 512]), Ok(()));
-    }
 }

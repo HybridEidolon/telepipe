@@ -23,21 +23,21 @@ fn test_little_endian_integers() {
     let buf = cursor.into_inner();
     assert_eq!(&buf, &[1u8, 0, 0, 0, 0, 0, 0, 0]);
 
-    let v = -1i16;
+    let v = -2i16;
     let mut cursor = Cursor::new(Vec::new());
     v.serialize(&mut cursor).unwrap();
     let buf = cursor.into_inner();
-    assert_eq!(&buf, &[255u8, 255]);
+    assert_eq!(&buf, &[254u8, 255]);
 
-    let v = -1i32;
+    let v = -2i32;
     let mut cursor = Cursor::new(Vec::new());
     v.serialize(&mut cursor).unwrap();
     let buf = cursor.into_inner();
-    assert_eq!(&buf, &[255u8, 255, 255, 255]);
+    assert_eq!(&buf, &[254u8, 255, 255, 255]);
 
-    let v = -1i64;
+    let v = -2i64;
     let mut cursor = Cursor::new(Vec::new());
     v.serialize(&mut cursor).unwrap();
     let buf = cursor.into_inner();
-    assert_eq!(&buf, &[255u8, 255, 255, 255, 255, 255, 255, 255]);
+    assert_eq!(&buf, &[254u8, 255, 255, 255, 255, 255, 255, 255]);
 }

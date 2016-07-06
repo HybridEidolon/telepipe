@@ -41,11 +41,20 @@ fn test_msg_serial_padding() {
 
 #[test]
 fn test_welcome_size() {
-    let msg = Msg::Welcome(0, Default::default());
+    let msg = Msg::LoginWelcome(0, Default::default());
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
     let buf: Vec<u8> = cursor.into_inner();
     assert_eq!(buf.len(), 0x004C);
+}
+
+#[test]
+fn test_welcome_content() {
+    let msg = Msg::LoginWelcome(0, Default::default());
+    let mut cursor = Cursor::new(Vec::new());
+    msg.serialize(&mut cursor).unwrap();
+    let buf: Vec<u8> = cursor.into_inner();
+    assert_eq!(&buf[..4], &[0x17, 0x00, 0x4C, 0x00][..4]);
 }
 
 #[test]
