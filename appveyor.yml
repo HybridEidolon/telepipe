@@ -1,9 +1,9 @@
 environment:
   matrix:
     - TARGET: i686-pc-windows-msvc
-      VERSION: 1.9.0
+      VERSION: 1.10.0
     - TARGET: i686-pc-windows-gnu
-      VERSION: 1.9.0
+      VERSION: 1.10.0
 
 install:
   - ps: Start-FileDownload "https://static.rust-lang.org/dist/rust-${env:VERSION}-${env:TARGET}.exe"
