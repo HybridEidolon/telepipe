@@ -20,14 +20,6 @@ use resolve::message::Qr;
 
 use session::spawn_new_session;
 
-fn init_log_config() {
-    let r = std::env::var("RUST_LOG");
-    match r {
-        Ok(ref s) if s != "" => (),
-        _ => std::env::set_var("RUST_LOG", "info")
-    }
-}
-
 fn dns_thread(socket: DnsSocket) {
     info!("DNS thread live");
     let mut buf = vec![0; MESSAGE_LIMIT];
@@ -61,8 +53,6 @@ fn main() {
     use std::str::FromStr;
     use std::net::SocketAddrV4;
 
-    // TODO replace this with user configurable via config file
-    init_log_config();
     env_logger::init().unwrap();
 
     info!("Telepipe");
