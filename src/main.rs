@@ -8,15 +8,16 @@ pub mod serial;
 pub mod msg;
 pub mod crypto;
 pub mod client;
+pub mod session;
 
-use std::net::{TcpListener, Ipv4Addr};
+use std::net::Ipv4Addr;
 use std::thread;
 
 use resolve::{DnsSocket, MESSAGE_LIMIT, Message as DnsMsg, Resource, RecordType, Class};
 use resolve::record;
 use resolve::message::Qr;
 
-use client::Session;
+use session::spawn_new_session;
 
 fn init_log_config() {
     let r = std::env::var("RUST_LOG");
@@ -55,34 +56,6 @@ fn dns_thread(socket: DnsSocket) {
     }
 }
 
-fn tcp_listener_thread(listener: TcpListener) {
-    let port = listener.local_addr().unwrap().port();
-    info!("TCP listener thread live on port {:?}", port);
-
-    for s in listener.incoming() {
-        match s {
-            Ok(s) => {
-                use std::str::FromStr;
-                use std::net::SocketAddr;
-
-                info!("Connected {:?} on port {:?}.", s.peer_addr(), port);
-                let addr = format!("74.59.188.106:{}", port);
-                let addr = <SocketAddr as FromStr>::from_str(&addr).unwrap();
-                let session: Session = Session::new(s, addr).unwrap();
-                thread::spawn(move|| {
-                    use client::Run;
-                    info!("Session spawned.");
-                    session.run();
-                });
-            }
-            Err(_) => {
-                error!("Error in TCP listener");
-                break;
-            }
-        }
-    }
-}
-
 fn main() {
     use std::str::FromStr;
     use std::net::SocketAddrV4;
@@ -99,42 +72,13 @@ fn main() {
         dns_thread(sock);
     });
 
-    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9103").unwrap()).unwrap();
+    spawn_new_session("192.168.150.1:9103", "74.59.188.106:9103", false);
+    spawn_new_session("192.168.150.1:9003", "74.59.188.106:9003", false);
+    spawn_new_session("192.168.150.1:9203", "74.59.188.106:9203", false);
+    spawn_new_session("192.168.150.1:9002", "74.59.188.106:9002", false);
 
-    thread::spawn(move || {
-        tcp_listener_thread(listener);
-    });
-
-    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9003").unwrap()).unwrap();
-
-    thread::spawn(move || {
-        tcp_listener_thread(listener);
-    });
-
-    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9203").unwrap()).unwrap();
-
-    thread::spawn(move || {
-        tcp_listener_thread(listener);
-    });
-
-    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9002").unwrap()).unwrap();
-
-    thread::spawn(move || {
-        tcp_listener_thread(listener);
-    });
-
-    // Episodes 1 & 2 ports
-    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9100").unwrap()).unwrap();
-
-    thread::spawn(move || {
-        tcp_listener_thread(listener);
-    });
-
-    let listener = TcpListener::bind(SocketAddrV4::from_str("192.168.150.1:9001").unwrap()).unwrap();
-
-    thread::spawn(move || {
-        tcp_listener_thread(listener);
-    });
+    spawn_new_session("192.168.150.1:9100", "74.59.188.106:9100", false);
+    spawn_new_session("192.168.150.1:9001", "74.59.188.106:9001", false);
 
     loop {
         use std::time::Duration;

@@ -2,9 +2,10 @@
 
 use std::sync::mpsc::{Sender, Receiver};
 use std::sync::mpsc;
-use std::net::{TcpStream, SocketAddr, Shutdown};
+use std::net::{TcpStream, SocketAddr, Shutdown, SocketAddrV4};
 use std::thread;
 use std::io::{Read, Write, Cursor};
+use std::str::FromStr;
 
 use byteorder::{LittleEndian as LE, ReadBytesExt};
 
@@ -12,6 +13,7 @@ use msg::*;
 use msg::common::*;
 use serial::*;
 use crypto::Cipher;
+use session::spawn_new_session;
 
 pub trait Run {
     fn run(self);
@@ -19,7 +21,6 @@ pub trait Run {
 
 pub struct Session {
     session_receiver: Receiver<ProxyMsg>,
-    session_sender: Sender<ProxyMsg>,
     client_stream: TcpStream,
     server_stream: TcpStream,
     client_write_sender: Sender<Msg>,
@@ -57,7 +58,6 @@ impl Session {
             client_write_sender: client_write_sender,
             server_write_sender: server_write_sender,
             server_addr: initial_server_addr,
-            session_sender: session_sender.clone(),
             welcome_sent: false,
             ship_welcome_sent: false,
             disconnected: false
@@ -91,19 +91,14 @@ impl Session {
                 }
             },
             Msg::Redirect4(r) => {
-                // New connection threads!
-                let addr = SocketAddr::V4(r.socket_addr);
-                let server = TcpStream::connect(addr).unwrap();
-                let old_addr = self.server_stream.peer_addr().unwrap();
-                info!("Redirecting from {} to {}", old_addr, addr);
-                self.server_stream.shutdown(Shutdown::Both).unwrap();
-                self.server_stream = server;
-                self.server_addr = addr;
-                let server_write_sender = create_connection_threads(Side::Server, self.server_stream.try_clone().unwrap(), self.session_sender.clone());
-                self.server_write_sender = server_write_sender;
+                let new_port = spawn_new_session("192.168.150.1:0", r.socket_addr, true);
+                let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("192.168.150.1:{}", new_port)).unwrap() });
+                self.client_write_sender.send(rr).unwrap();
             },
-            Msg::Redirect6(_r) => {
-                unimplemented!()
+            Msg::Redirect6(r) => {
+                let new_port = spawn_new_session("192.168.150.1:0", r.socket_addr, true);
+                let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("192.168.150.1:{}", new_port)).unwrap() });
+                self.client_write_sender.send(rr).unwrap();
             },
             m => self.client_write_sender.send(m).unwrap()
         }
@@ -111,12 +106,7 @@ impl Session {
 
     fn handle_from_client(&mut self, msg: Msg) {
         info!("Client: {:?}", msg);
-        // Eventually we'll do more here, but this is the bare minimum.
         match msg {
-            m @ Msg::Type05Disconnect => {
-                self.server_write_sender.send(m).unwrap();
-                self.disconnected = true;
-            },
             m => self.server_write_sender.send(m).unwrap()
         }
     }
