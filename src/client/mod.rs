@@ -8,6 +8,7 @@ use std::io::{Read, Write, Cursor};
 use std::str::FromStr;
 
 use byteorder::{LittleEndian as LE, ReadBytesExt};
+use rand::random;
 
 use msg::*;
 use msg::common::*;
@@ -73,7 +74,8 @@ impl Session {
                     // Craft our own LoginWelcome and send it to the client instead.
                     let my_w = Msg::LoginWelcome(0, Welcome {
                         copyright: LOGIN_WELCOME_COPYRIGHT.to_string(),
-                        ..Default::default()
+                        client_seed: random::<u32>(),
+                        server_seed: random::<u32>()
                     });
                     self.client_write_sender.send(my_w).unwrap();
                     self.welcome_sent = true;
@@ -84,7 +86,8 @@ impl Session {
                 if !self.ship_welcome_sent {
                     let my_w = Msg::ShipWelcome(0, Welcome {
                         copyright: SHIP_WELCOME_COPYRIGHT.to_string(),
-                        ..Default::default()
+                        client_seed: random::<u32>(),
+                        server_seed: random::<u32>()
                     });
                     self.client_write_sender.send(my_w).unwrap();
                     self.welcome_sent = true;

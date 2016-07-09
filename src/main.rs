@@ -3,6 +3,7 @@ extern crate encoding;
 #[macro_use] extern crate log;
 extern crate env_logger;
 extern crate resolve;
+extern crate rand;
 
 pub mod serial;
 pub mod msg;
