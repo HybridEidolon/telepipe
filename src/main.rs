@@ -22,7 +22,7 @@ fn init_log_config() {
     let r = std::env::var("RUST_LOG");
     match r {
         Ok(ref s) if s != "" => (),
-        _ => std::env::set_var("RUST_LOG", "debug")
+        _ => std::env::set_var("RUST_LOG", "info")
     }
 }
 

@@ -21,7 +21,7 @@ impl Cipher {
             seed: seed
         };
 
-        info!("Initial seed: {}", seed);
+        debug!("Initial seed: {}", seed);
 
         ret.initialize();
 

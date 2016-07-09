@@ -14,8 +14,10 @@ use self::common::*;
 pub enum Msg {
     Unknown(u8, u8, Vec<u8>),
     LoginWelcome(u8, Welcome),
+    ShipWelcome(u8, Welcome),
     Redirect4(Redirect4),
-    Redirect6(Redirect6)
+    Redirect6(Redirect6),
+    Type05Disconnect
 }
 
 impl Serial for Msg {
@@ -27,6 +29,11 @@ impl Serial for Msg {
         match self {
             &Msg::LoginWelcome(ref f, ref pl) => {
                 code = 0x17;
+                flags = *f;
+                try!(pl.serialize(&mut cursor));
+            },
+            &Msg::ShipWelcome(ref f, ref pl) => {
+                code = 0x02;
                 flags = *f;
                 try!(pl.serialize(&mut cursor));
             },
@@ -45,6 +52,10 @@ impl Serial for Msg {
                 flags = *f;
                 try!(cursor.write_all(b));
             },
+            &Msg::Type05Disconnect => {
+                code = 0x05;
+                flags = 0;
+            }
             //_ => unimplemented!()
         }
 
@@ -65,11 +76,13 @@ impl Serial for Msg {
         let code = try!(r.read_u8());
         let flags = try!(r.read_u8());
         let size_verbatim = try!(r.read_u16::<LE>());
-        let size = round_up(size_verbatim - 4, 4);
+        let size = if size_verbatim <= 4 { 0 } else { round_up(size_verbatim - 4, 4) };
         let mut buf: Vec<u8> = vec![0; size as usize];
         try!(r.read_exact(&mut buf));
 
         let ret = match code {
+            0x02 => Msg::ShipWelcome(flags, try!(Serial::deserialize(&mut Cursor::new(buf)))),
+            0x05 => Msg::Type05Disconnect,
             0x17 => Msg::LoginWelcome(flags, try!(Serial::deserialize(&mut Cursor::new(buf)))),
             0x19 => {
                 if flags == 6 {

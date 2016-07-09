@@ -20,25 +20,22 @@ pub trait Run {
 
 pub struct Session {
     session_receiver: Receiver<ProxyMsg>,
+    session_sender: Sender<ProxyMsg>,
     client_stream: TcpStream,
     server_stream: TcpStream,
     client_write_sender: Sender<Msg>,
-    server_write_sender: Sender<Msg>
-}
-
-pub struct Client {
-
-}
-
-pub struct Server {
-
+    server_write_sender: Sender<Msg>,
+    server_addr: SocketAddr,
+    welcome_sent: bool,
+    ship_welcome_sent: bool,
+    disconnected: bool
 }
 
 enum ProxyMsg {
     Server(Msg),
     Client(Msg),
-    ReadThreadClosed(Side),
-    WriteThreadClosed(Side)
+    ReadThreadClosed(Side, SocketAddr),
+    WriteThreadClosed(Side, SocketAddr)
 }
 
 impl Session {
@@ -59,23 +56,52 @@ impl Session {
             client_stream: client,
             session_receiver: session_receiver,
             client_write_sender: client_write_sender,
-            server_write_sender: server_write_sender
+            server_write_sender: server_write_sender,
+            server_addr: initial_server_addr,
+            session_sender: session_sender.clone(),
+            welcome_sent: false,
+            ship_welcome_sent: false,
+            disconnected: false
         })
     }
 
     fn handle_from_server(&mut self, msg: Msg) {
         info!("Server: {:?}", msg);
         match msg {
-            Msg::LoginWelcome(f, w) => {
-                // Craft our own LoginWelcome and send it to the client instead.
-                let my_w = Msg::LoginWelcome(0, Welcome {
-                    copyright: LOGIN_WELCOME_COPYRIGHT.to_string(),
-                    ..Default::default()
-                });
-                self.client_write_sender.send(my_w).unwrap();
+            Msg::LoginWelcome(_, w) => {
+                info!("Welcome to a login server!");
+                if !self.welcome_sent {
+                    // Craft our own LoginWelcome and send it to the client instead.
+                    let my_w = Msg::LoginWelcome(0, Welcome {
+                        copyright: LOGIN_WELCOME_COPYRIGHT.to_string(),
+                        ..Default::default()
+                    });
+                    self.client_write_sender.send(my_w).unwrap();
+                    self.welcome_sent = true;
+                }
+            },
+            Msg::ShipWelcome(_, w) => {
+                info!("Welcome to a lobby server!");
+                if !self.ship_welcome_sent {
+                    let my_w = Msg::ShipWelcome(0, Welcome {
+                        copyright: SHIP_WELCOME_COPYRIGHT.to_string(),
+                        ..Default::default()
+                    });
+                    self.client_write_sender.send(my_w).unwrap();
+                    self.welcome_sent = true;
+                }
             },
             Msg::Redirect4(r) => {
-                unimplemented!()
+                // New connection threads!
+                let addr = SocketAddr::V4(r.socket_addr);
+                let server = TcpStream::connect(addr).unwrap();
+                let old_addr = self.server_stream.peer_addr().unwrap();
+                info!("Redirecting from {} to {}", old_addr, addr);
+                self.server_stream.shutdown(Shutdown::Both).unwrap();
+                self.server_stream = server;
+                self.server_addr = addr;
+                let server_write_sender = create_connection_threads(Side::Server, self.server_stream.try_clone().unwrap(), self.session_sender.clone());
+                self.server_write_sender = server_write_sender;
             },
             Msg::Redirect6(r) => {
                 unimplemented!()
@@ -87,7 +113,13 @@ impl Session {
     fn handle_from_client(&mut self, msg: Msg) {
         info!("Client: {:?}", msg);
         // Eventually we'll do more here, but this is the bare minimum.
-        self.server_write_sender.send(msg).unwrap();
+        match msg {
+            m @ Msg::Type05Disconnect => {
+                self.server_write_sender.send(m).unwrap();
+                self.disconnected = true;
+            },
+            m => self.server_write_sender.send(m).unwrap()
+        }
     }
 }
 
@@ -97,30 +129,40 @@ impl Run for Session {
             // Read from session messages
             match self.session_receiver.recv() {
                 Ok(m) => match m {
-                    ProxyMsg::Server(m) => self.handle_from_server(m),
-                    ProxyMsg::Client(m) => self.handle_from_client(m),
-                    ProxyMsg::ReadThreadClosed(s) if s == Side::Server => {
-                        info!("Server read thread closed");
-                        self.client_stream.shutdown(Shutdown::Both).unwrap();
-                        self.server_stream.shutdown(Shutdown::Both).unwrap();
-                        break;
+                    ProxyMsg::Server(m) => {
+                        self.handle_from_server(m);
+                        if self.disconnected { break }
                     },
-                    ProxyMsg::ReadThreadClosed(s) if s == Side::Client => {
+                    ProxyMsg::Client(m) => {
+                        self.handle_from_client(m);
+                        if self.disconnected { break }
+                    },
+                    ProxyMsg::ReadThreadClosed(s, peer_addr) if s == Side::Server => {
+                        // check if the peer address is the current peer address
+                        if peer_addr == self.server_addr {
+                            info!("Server read thread closed");
+                            break;
+                        } else {
+                            info!("Old server read thread closed");
+                        }
+                    },
+                    ProxyMsg::ReadThreadClosed(s, _peer_addr) if s == Side::Client => {
+                        // The client should never disconnect because of redirect.
                         info!("Client read thread closed");
-                        self.client_stream.shutdown(Shutdown::Both).unwrap();
-                        self.server_stream.shutdown(Shutdown::Both).unwrap();
                         break;
                     },
-                    ProxyMsg::WriteThreadClosed(s) if s == Side::Server => {
-                        info!("Server write thread closed");
-                        self.client_stream.shutdown(Shutdown::Both).unwrap();
-                        self.server_stream.shutdown(Shutdown::Both).unwrap();
-                        break;
+                    ProxyMsg::WriteThreadClosed(s, peer_addr) if s == Side::Server => {
+                        // check if the peer address is the current peer address
+                        if peer_addr == self.server_addr {
+                            info!("Server write thread closed");
+                            break;
+                        } else {
+                            info!("Old server write thread closed");
+                        }
                     },
-                    ProxyMsg::WriteThreadClosed(s) if s == Side::Client => {
-                        info!("Server write thread closed");
-                        self.client_stream.shutdown(Shutdown::Both).unwrap();
-                        self.server_stream.shutdown(Shutdown::Both).unwrap();
+                    ProxyMsg::WriteThreadClosed(s, _peer_addr) if s == Side::Client => {
+                        // The client should never disconnect because of redirect.
+                        info!("Client write thread closed");
                         break;
                     },
                     _ => ()
@@ -133,6 +175,8 @@ impl Run for Session {
         }
 
         info!("Exiting session.");
+        self.client_stream.shutdown(Shutdown::Both).unwrap();
+        self.server_stream.shutdown(Shutdown::Both).unwrap();
     }
 }
 
@@ -173,23 +217,33 @@ fn read_thread(side: Side,
                read_cipher_receiver: Option<Receiver<Option<Cipher>>>) {
     let mut cipher: Option<Cipher>;
     let mut header_buf: [u8; 4] = [0; 4];
+    let peer_addr = match stream.peer_addr() {
+        Ok(a) => a,
+        Err(_) => {
+            // okay so... idk what to do
+            session_sender.send(ProxyMsg::ReadThreadClosed(side, stream.local_addr().unwrap())).unwrap();
+            return
+        }
+    };
+
+    info!("Read thread on {} open.", peer_addr);
 
     if let Some(receiver) = read_cipher_receiver {
         // Block to receive the read cipher.
-        debug!("{:?} Read thread on {} is waiting for read cipher", side, stream.peer_addr().unwrap());
+        debug!("{:?} Read thread on {} is waiting for read cipher", side, peer_addr);
         match receiver.recv() {
             Ok(Some(c)) => cipher = Some(c),
             _ => {
                 // An error ocurred
                 error!("Unable to receive read cipher. Something else happened?");
 
-                session_sender.send(ProxyMsg::ReadThreadClosed(side)).unwrap();
+                session_sender.send(ProxyMsg::ReadThreadClosed(side, peer_addr)).unwrap();
                 return;
             }
         }
-        debug!("Got {:?} read thread cipher on {}", side, stream.peer_addr().unwrap());
+        debug!("Got {:?} read thread cipher on {}", side, peer_addr);
     } else {
-        debug!("Read thread on {} does not need a read cipher yet (server read)", stream.peer_addr().unwrap());
+        debug!("Read thread on {} does not need a read cipher yet (server read)", peer_addr);
         cipher = None;
     }
 
@@ -197,7 +251,7 @@ fn read_thread(side: Side,
         // Read the header.
         debug!("{:?} side Reading header", side);
         if let Err(e) = stream.read_exact(&mut header_buf[..4]) {
-            error!("Unable to read header from {:?} read stream: {}", side, e);
+            error!("Unable to read header from {:?} read stream at {}: {}", side, peer_addr, e);
             break;
         }
 
@@ -216,7 +270,7 @@ fn read_thread(side: Side,
         let ty = header_cursor.read_u8().unwrap();
         let flags = header_cursor.read_u8().unwrap();
         let size_as_written = header_cursor.read_u16::<LE>().unwrap();
-        let size = round_up(size_as_written - 4, 4);
+        let size = if size_as_written <= 4 { 0 } else { round_up(size_as_written - 4, 4) };
         let mut read_buf: Vec<u8> = vec![0; size as usize];
 
         debug!("Header: ty={} flags={} size_as_written={} size={}", ty, flags, size_as_written, size);
@@ -251,6 +305,13 @@ fn read_thread(side: Side,
                             sender.send(Some(Cipher::new(w.client_seed))).unwrap();
                         }
                     },
+                    (&Msg::ShipWelcome(_, ref w), true) => {
+                        cipher = Some(Cipher::new(w.server_seed));
+                        if let Some(ref sender) = write_cipher_sender {
+                            debug!("ShipWelcome message received, sending cipher to writer thread.");
+                            sender.send(Some(Cipher::new(w.client_seed))).unwrap();
+                        }
+                    },
                     _ => ()
                 }
 
@@ -260,7 +321,8 @@ fn read_thread(side: Side,
                 };
                 match result {
                     Err(_) => {
-                        error!("Unable to send message to session sender.");
+                        // Session is closed.
+                        //error!("Unable to send message to session sender.");
                         break;
                     },
                     _ => ()
@@ -275,7 +337,9 @@ fn read_thread(side: Side,
         // Start over...
     }
 
-    session_sender.send(ProxyMsg::ReadThreadClosed(side)).unwrap();
+    match session_sender.send(ProxyMsg::ReadThreadClosed(side, peer_addr)) {
+        _ => ()
+    }
 }
 
 fn write_thread(side: Side,
@@ -285,6 +349,16 @@ fn write_thread(side: Side,
                 read_cipher_sender: Option<Sender<Option<Cipher>>>,
                 write_cipher_receiver: Option<Receiver<Option<Cipher>>>) {
     let mut cipher: Option<Cipher>;
+    let peer_addr = match stream.peer_addr() {
+        Ok(a) => a,
+        Err(_) => {
+            // okay so... idk what to do
+            session_sender.send(ProxyMsg::WriteThreadClosed(side, stream.local_addr().unwrap())).unwrap();
+            return
+        }
+    };
+
+    info!("Write thread on {} open.", peer_addr);
 
     if let Some(ref receiver) = write_cipher_receiver {
         debug!("{:?} Write thread on {} is waiting for write cipher", side, stream.peer_addr().unwrap());
@@ -292,7 +366,7 @@ fn write_thread(side: Side,
             Ok(Some(c)) => cipher = Some(c),
             _ => {
                 error!("Unable to receive write cipher on write thread. Something happened elsewhere?");
-                session_sender.send(ProxyMsg::WriteThreadClosed(side)).unwrap();
+                session_sender.send(ProxyMsg::WriteThreadClosed(side, peer_addr)).unwrap();
                 return;
             }
         }
@@ -326,6 +400,13 @@ fn write_thread(side: Side,
                             sender.send(Some(Cipher::new(w.client_seed))).unwrap();
                         }
                     },
+                    (&Msg::ShipWelcome(_, ref w), true) => {
+                        cipher = Some(Cipher::new(w.server_seed));
+                        if let Some(ref sender) = read_cipher_sender {
+                            debug!("ShipWelcome message is being written, sending cipher to reader thread.");
+                            sender.send(Some(Cipher::new(w.client_seed))).unwrap();
+                        }
+                    },
                     _ => ()
                 }
             },
@@ -336,5 +417,7 @@ fn write_thread(side: Side,
         }
     }
 
-    session_sender.send(ProxyMsg::WriteThreadClosed(side)).unwrap();
+    match session_sender.send(ProxyMsg::WriteThreadClosed(side, peer_addr)) {
+        _ => ()
+    }
 }
