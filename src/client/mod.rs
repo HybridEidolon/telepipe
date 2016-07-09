@@ -5,7 +5,6 @@ use std::sync::mpsc;
 use std::net::{TcpStream, SocketAddr, Shutdown};
 use std::thread;
 use std::io::{Read, Write, Cursor};
-use std::error::Error;
 
 use byteorder::{LittleEndian as LE, ReadBytesExt};
 
@@ -68,7 +67,7 @@ impl Session {
     fn handle_from_server(&mut self, msg: Msg) {
         info!("Server: {:?}", msg);
         match msg {
-            Msg::LoginWelcome(_, w) => {
+            Msg::LoginWelcome(_, _) => {
                 info!("Welcome to a login server!");
                 if !self.welcome_sent {
                     // Craft our own LoginWelcome and send it to the client instead.
@@ -80,7 +79,7 @@ impl Session {
                     self.welcome_sent = true;
                 }
             },
-            Msg::ShipWelcome(_, w) => {
+            Msg::ShipWelcome(_, _) => {
                 info!("Welcome to a lobby server!");
                 if !self.ship_welcome_sent {
                     let my_w = Msg::ShipWelcome(0, Welcome {
@@ -103,7 +102,7 @@ impl Session {
                 let server_write_sender = create_connection_threads(Side::Server, self.server_stream.try_clone().unwrap(), self.session_sender.clone());
                 self.server_write_sender = server_write_sender;
             },
-            Msg::Redirect6(r) => {
+            Msg::Redirect6(_r) => {
                 unimplemented!()
             },
             m => self.client_write_sender.send(m).unwrap()
@@ -259,7 +258,7 @@ fn read_thread(side: Side,
 
         if let Some(ref mut cipher) = cipher {
             // Decrypt
-            cipher.codec(&mut header_buf[..]);
+            cipher.codec(&mut header_buf[..]).unwrap();
         } else {
             debug!("{:?} Read cipher was not available, so no codec needed on header", side);
         }
@@ -385,12 +384,18 @@ fn write_thread(side: Side,
                 let mut buf: Vec<u8> = cursor.into_inner();
 
                 if let Some(ref mut cipher) = cipher {
-                    cipher.codec(&mut buf[..]);
+                    cipher.codec(&mut buf[..]).unwrap();
                 } else {
                     debug!("Writing unencrypted message since no cipher available yet.");
                 }
                 debug!("Message buffer size: {}", buf.len());
-                stream.write_all(&buf[..]);
+                match stream.write_all(&buf[..]) {
+                    Ok(_) => (),
+                    Err(e) => {
+                        error!("Unable to write full message to {:?} stream at {}: {}", side, peer_addr, e);
+                        break
+                    }
+                }
 
                 match (&m, cipher.is_none()) {
                     (&Msg::LoginWelcome(_, ref w), true) => {
