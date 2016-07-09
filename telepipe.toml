@@ -1,0 +1,32 @@
+# The local interface IP to bind to. Set to 0.0.0.0 to listen on all interfaces.
+#
+# Set this to your local computer's LAN IP between your TAP adapter and the host
+# if you are using Dolphin without bridging.
+bind_addr = "192.168.150.1"
+
+# The address of the PSO server you wish to connect to.
+#
+# As of this writing (7/9/2016):
+# SCHTHACK  = 74.59.188.106
+# Sylverant = 67.222.144.120
+#
+# These IPs are seen in the context of the host machine, not the connecting client,
+# so you can use 127.0.0.1 if you are running a local server.
+server_addr = "74.59.188.106"
+
+# The ports to listen on and map to.
+#
+# You only need to change this if you are running a PSO server locally that is
+# already running on these ports.
+#
+# Each pair is of the form [local, server]
+listen_ports = [
+    # Episode 3
+    [9103, 9103], [9003, 9003], [9203, 9203], [9002, 9002],
+    # Episodes 1&2
+    [9100, 9100], [9001, 9001]
+]
+
+# Whether or not to run a DNS server on port 53. The server will use the same
+# bind address as the proxy itself.
+use_dns = true

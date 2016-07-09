@@ -4,21 +4,29 @@ extern crate encoding;
 extern crate env_logger;
 extern crate resolve;
 extern crate rand;
+extern crate toml;
+extern crate rustc_serialize;
+extern crate clap;
 
 pub mod serial;
 pub mod msg;
 pub mod crypto;
 pub mod client;
 pub mod session;
+pub mod config;
 
 use std::net::Ipv4Addr;
 use std::thread;
+use std::io::Read;
+use std::fs::File;
 
+use clap::{App, Arg};
 use resolve::{DnsSocket, MESSAGE_LIMIT, Message as DnsMsg, Resource, RecordType, Class};
 use resolve::record;
 use resolve::message::Qr;
 
 use session::spawn_new_session;
+use config::Config;
 
 fn dns_thread(socket: DnsSocket) {
     info!("DNS thread live");
@@ -50,26 +58,46 @@ fn dns_thread(socket: DnsSocket) {
 }
 
 fn main() {
-    use std::str::FromStr;
-    use std::net::SocketAddrV4;
-
     env_logger::init().unwrap();
 
-    info!("Telepipe");
-    info!("Waiting for connections...");
+    let matches = App::new("Telepipe")
+        .version("1.0")
+        .author("Eidolon (@HybridEidolon)")
+        .about("A proxy for Phantasy Star Online games for the GameCube.")
+        .arg(Arg::with_name("config")
+            .short("c")
+            .long("config")
+            .value_name("PATH")
+            .help("Sets the config file.")
+            .default_value("telepipe.toml")
+        )
+        .get_matches();
 
-    let sock = DnsSocket::bind(SocketAddrV4::from_str("192.168.150.1:53").unwrap()).unwrap();
-    thread::spawn(move || {
-        dns_thread(sock);
-    });
+    let config = matches.value_of("config").unwrap();
 
-    spawn_new_session("192.168.150.1:9103", "74.59.188.106:9103", false);
-    spawn_new_session("192.168.150.1:9003", "74.59.188.106:9003", false);
-    spawn_new_session("192.168.150.1:9203", "74.59.188.106:9203", false);
-    spawn_new_session("192.168.150.1:9002", "74.59.188.106:9002", false);
+    debug!("Config file in use: {}", config);
 
-    spawn_new_session("192.168.150.1:9100", "74.59.188.106:9100", false);
-    spawn_new_session("192.168.150.1:9001", "74.59.188.106:9001", false);
+    // Parse the config
+    let mut contents = String::new();
+    File::open(config).unwrap().read_to_string(&mut contents).unwrap();
+    let config: Config = match toml::decode_str::<Config>(&contents) {
+        Some(c) => c,
+        None => {
+            println!("The config file is incorrect. Please correct it.");
+            return
+        }
+    };
+
+    if config.use_dns {
+        let sock = DnsSocket::bind((config.bind_addr.as_str(), 53)).unwrap();
+        thread::spawn(move || {
+            dns_thread(sock);
+        });
+    }
+
+    for (local, server) in config.listen_ports {
+        spawn_new_session((config.bind_addr.as_str(), local), (config.server_addr.as_str(), server), false);
+    }
 
     loop {
         use std::time::Duration;
