@@ -30,6 +30,8 @@ impl Cipher {
 
     pub fn seed(&self) -> u32 { self.seed }
 
+    pub fn keys(&self) -> &[u32] { &self.keys[..] }
+
     /// Use the cipher over the given buffer, mutating in-place, and updating
     /// the cipher state in the process. buf must be a multiple of 4.
     pub fn codec(&mut self, buf: &mut [u8]) -> Result<(), CodecError> {
@@ -70,38 +72,28 @@ impl Cipher {
 
         let mut seed = self.seed;
 
+        self.pos = 0;
+
         for _ in 0..17 {
             for _ in 0..32 {
                 seed = (W(seed) * W(0x5D588B65)).0;
-                base_key = base_key >> 1;
                 seed = (W(seed) + W(1)).0;
-                base_key = if seed & 0x80000000 != 0 {
-                    base_key | 0x80000000
-                } else {
-                    base_key & 0x7FFFFFFF
-                };
+                base_key = (base_key >> 1) | (seed & 0x80000000);
             }
             self.keys[self.pos] = base_key;
             self.pos += 1;
         }
         source1 = 0;
         source2 = 1;
+
         self.pos -= 1;
         let r = (((W(self.keys[0]) >> 9) ^ (W(self.keys[self.pos]) << 23)) ^ W(self.keys[15])).0;
         self.keys[self.pos] = r;
         source3 = self.pos;
         self.pos += 1;
+
         while self.pos != 521 {
-            // fight me IRL, I am not wasting another 6 hours cleaning this up
-            let term1 = W(self.keys[source3]);
-            let term2 = W(self.keys[source1]);
-            let term3 = W(self.keys[source2]);
-            let term4 = term1 << 23;
-            let term5 = term4 ^ W(0xFF800000);
-            let term6 = term3 & W(0x007FFFFF);
-            let term7 = term5 ^ term6;
-            let term8 = term1 ^ term7;
-            let r = term8.0;
+            let r = (((W(self.keys[source1]) << 23) ^ (W(self.keys[source2]) >> 9)) ^ (W(self.keys[source3]))).0;
             self.keys[self.pos] = r;
             self.pos += 1;
             source1 += 1;
