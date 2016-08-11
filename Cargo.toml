@@ -1,7 +1,7 @@
 [package]
 name = "telepipe"
 description = "A proxy for Phantasy Star Online games for GameCube."
-version = "0.1.0"
+version = "1.0.1"
 authors = ["Eidolon"]
 license = "MIT"
 

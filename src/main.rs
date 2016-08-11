@@ -28,7 +28,7 @@ use resolve::message::Qr;
 use session::spawn_new_session;
 use config::Config;
 
-fn dns_thread(socket: DnsSocket) {
+fn dns_thread(socket: DnsSocket, server_addr: Ipv4Addr) {
     info!("DNS thread live");
     let mut buf = vec![0; MESSAGE_LIMIT];
     loop {
@@ -41,7 +41,7 @@ fn dns_thread(socket: DnsSocket) {
                 mm.header.qr = Qr::Response;
                 mm.header;
                 let mut resource = Resource::new("gc01.st-pso.games.sega.net".to_string(), RecordType::A, Class::Internet, 59);
-                resource.write_rdata(&record::A { address: Ipv4Addr::new(192, 168, 150, 1) }).unwrap();
+                resource.write_rdata(&record::A { address: server_addr }).unwrap();
                 mm.answer = vec![resource.clone()];
                 mm.authority = vec![resource.clone()];
                 mm.header.recursion_available = false;
@@ -89,9 +89,12 @@ fn main() {
     };
 
     if config.use_dns {
+        use std::str::FromStr;
+
         let sock = DnsSocket::bind((config.bind_addr.as_str(), 53)).unwrap();
+        let bind_addr = Ipv4Addr::from_str(config.bind_addr.as_str()).unwrap();
         thread::spawn(move || {
-            dns_thread(sock);
+            dns_thread(sock, bind_addr);
         });
     }
 
