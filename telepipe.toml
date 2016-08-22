@@ -4,6 +4,13 @@
 # if you are using Dolphin without bridging.
 bind_addr = "192.168.150.1"
 
+# The publicly visible address to redirect clients to. Use by the DNS server and by
+# the proxy during ship redirects. Probably the same as above. If the IP doesn't
+# route to the proxy server from the client, unexpected behavior may happen.
+#
+# This should be the same as above most of the time.
+proxy_server_addr = "192.168.150.1"
+
 # The address of the PSO server you wish to connect to.
 #
 # As of this writing (7/9/2016):

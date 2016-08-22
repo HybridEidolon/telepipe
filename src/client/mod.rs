@@ -29,7 +29,9 @@ pub struct Session {
     server_addr: SocketAddr,
     welcome_sent: bool,
     ship_welcome_sent: bool,
-    disconnected: bool
+    disconnected: bool,
+    local_server_addr: String,
+    local_bind_addr: String
 }
 
 enum ProxyMsg {
@@ -40,12 +42,12 @@ enum ProxyMsg {
 }
 
 impl Session {
-    pub fn new(client: TcpStream, initial_server_addr: SocketAddr) -> Result<Session, String> {
+    pub fn new(client: TcpStream, initial_server_addr: SocketAddr, local_server_addr: String, local_bind_addr: String) -> Result<Session, String> {
         // Start new threads to process reads and writes, and use channels to handle incoming messages.
         // Use this session to handle messages from both the client and from the server.
 
         // Connect to the server.
-        let server = TcpStream::connect(initial_server_addr).unwrap();
+        let server: TcpStream = TcpStream::connect(initial_server_addr).unwrap();
 
         let (session_sender, session_receiver) = mpsc::channel::<ProxyMsg>();
 
@@ -61,7 +63,9 @@ impl Session {
             server_addr: initial_server_addr,
             welcome_sent: false,
             ship_welcome_sent: false,
-            disconnected: false
+            disconnected: false,
+            local_server_addr: local_server_addr,
+            local_bind_addr: local_bind_addr
         })
     }
 
@@ -94,13 +98,13 @@ impl Session {
                 }
             },
             Msg::Redirect4(r) => {
-                let new_port = spawn_new_session("192.168.150.1:0", r.socket_addr, true);
-                let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("192.168.150.1:{}", new_port)).unwrap() });
+                let new_port = spawn_new_session(format!("{}:0", self.local_bind_addr).as_str(), r.socket_addr, self.local_server_addr.clone(), self.local_bind_addr.clone(), true);
+                let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("{}:{}", self.local_server_addr, new_port)).unwrap() });
                 self.client_write_sender.send(rr).unwrap();
             },
             Msg::Redirect6(r) => {
-                let new_port = spawn_new_session("192.168.150.1:0", r.socket_addr, true);
-                let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("192.168.150.1:{}", new_port)).unwrap() });
+                let new_port = spawn_new_session(format!("{}:0", self.local_bind_addr).as_str(), r.socket_addr, self.local_server_addr.clone(), self.local_bind_addr.clone(), true);
+                let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("{}:{}", self.local_server_addr, new_port)).unwrap() });
                 self.client_write_sender.send(rr).unwrap();
             },
             m => self.client_write_sender.send(m).unwrap()
