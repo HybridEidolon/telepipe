@@ -6,3 +6,13 @@ rust:
 matrix:
   allow_failures:
     - rust: nightly
+
+cache: cargo
+before_cache:
+  - chmod -R a+r $HOME/.cargo
+
+branches:
+  only:
+    - /^v\d+\.\d+\.\d+.*$/
+    - /^\d+\.\d+\.\d+.*$/
+    - master
