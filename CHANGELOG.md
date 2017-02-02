@@ -7,6 +7,8 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## 1.1.1
+
 ### Added
 
  - On next release, AppVeyor will deploy an i686 Windows build to GitHub
