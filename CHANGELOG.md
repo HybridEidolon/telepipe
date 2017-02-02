@@ -11,6 +11,7 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
  - On next release, AppVeyor will deploy an i686 Windows build to GitHub
  Releases.
+ - When a socket fails to bind, a better error description will be shown.
 
 ## 1.1.0
 

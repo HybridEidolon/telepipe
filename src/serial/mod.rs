@@ -10,9 +10,9 @@ pub mod util;
 /// A type that may be hand-serialized into Read and Write.
 pub trait Serial: Sized {
     /// Serialize into a Write.
-    fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error>;
+    fn serialize<W: Write>(&self, write: W) -> Result<(), io::Error>;
     /// Deserialize from a Read.
-    fn deserialize<R: Read>(mut read: R) -> Result<Self, io::Error>;
+    fn deserialize<R: Read>(read: R) -> Result<Self, io::Error>;
 }
 
 // NOTE: We're using Little Endian here because that's how the PSO streams are.

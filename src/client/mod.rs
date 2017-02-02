@@ -98,12 +98,12 @@ impl Session {
                 }
             },
             Msg::Redirect4(r) => {
-                let new_port = spawn_new_session(format!("{}:0", self.local_bind_addr).as_str(), r.socket_addr, self.local_server_addr.clone(), self.local_bind_addr.clone(), true);
+                let new_port = spawn_new_session(format!("{}:0", self.local_bind_addr).as_str(), r.socket_addr, self.local_server_addr.clone(), self.local_bind_addr.clone(), true).unwrap();
                 let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("{}:{}", self.local_server_addr, new_port)).unwrap() });
                 self.client_write_sender.send(rr).unwrap();
             },
             Msg::Redirect6(r) => {
-                let new_port = spawn_new_session(format!("{}:0", self.local_bind_addr).as_str(), r.socket_addr, self.local_server_addr.clone(), self.local_bind_addr.clone(), true);
+                let new_port = spawn_new_session(format!("{}:0", self.local_bind_addr).as_str(), r.socket_addr, self.local_server_addr.clone(), self.local_bind_addr.clone(), true).unwrap();
                 let rr = Msg::Redirect4(Redirect4 { socket_addr: SocketAddrV4::from_str(&format!("{}:{}", self.local_server_addr, new_port)).unwrap() });
                 self.client_write_sender.send(rr).unwrap();
             },
