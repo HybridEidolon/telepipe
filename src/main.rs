@@ -22,12 +22,41 @@ use std::net::Ipv4Addr;
 use std::thread;
 use std::io::{self, Read};
 use std::fs::File;
+use std::str::FromStr;
+use std::time::Duration;
 
 use clap::{App, Arg};
 use resolve::DnsSocket;
 
 use session::spawn_new_session;
 use config::Config;
+
+fn dns_bind_attempt_loop(config: &Config) {
+    let mut printed_error = false;
+    loop {
+        let sock = match DnsSocket::bind((config.bind_addr.as_str(), 53)) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("An error binding the DNS server occurred: {}", e);
+                if e.kind() == io::ErrorKind::AddrNotAvailable && !printed_error {
+                    println!("If you are trying to play in Dolphin, it is likely that you have \
+                              not initialized the TAP adapter yet. Please make sure to install \
+                              and setup your TAP adapter and wait until the 'Connecting to DNS \
+                              Server' prompt in-game before running this program.");
+                    println!("Continuing to attempt DNS bind every second, press Ctrl-C to stop");
+                    println!("-------------");
+                    println!();
+                }
+                printed_error = true;
+                thread::sleep(Duration::from_millis(1000));
+                continue;
+            }
+        };
+        let proxy_server_addr = Ipv4Addr::from_str(config.proxy_server_addr.as_str()).unwrap();
+        thread::spawn(move || { dns::dns_thread(sock, proxy_server_addr); });
+        break;
+    }
+}
 
 fn main() {
     env_logger::init().unwrap();
@@ -60,24 +89,7 @@ fn main() {
     };
 
     if config.use_dns {
-        use std::str::FromStr;
-
-        let sock = match DnsSocket::bind((config.bind_addr.as_str(), 53)) {
-            Ok(v) => v,
-            Err(e) => {
-                println!("An error binding the DNS server occurred: {}", e);
-                if e.kind() == io::ErrorKind::AddrNotAvailable {
-                    println!("If you are trying to play in Dolphin, it is likely that you have \
-                              not initialized the TAP adapter yet. Please make sure to install \
-                              and setup your TAP adapter and wait until the 'Connecting to DNS \
-                              Server' prompt in-game before running this program.");
-                }
-                util::pause().unwrap();
-                return;
-            }
-        };
-        let proxy_server_addr = Ipv4Addr::from_str(config.proxy_server_addr.as_str()).unwrap();
-        thread::spawn(move || { dns::dns_thread(sock, proxy_server_addr); });
+        dns_bind_attempt_loop(&config);
     }
 
     for (local, server) in config.listen_ports {

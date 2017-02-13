@@ -7,6 +7,13 @@ project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+ - Instead of prompting with an error description when the DNS fails to bind,
+ it will now attempt to bind the DNS server port in a loop. This behavior is
+ more desirable for Dolphin users, since they will not need to reopen the
+ application just before the game times out.
+
 ## 1.1.1
 
 ### Added
