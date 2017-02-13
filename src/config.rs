@@ -4,7 +4,7 @@ pub struct Config {
     pub server_addr: String,
     pub listen_ports: Vec<(u16, u16)>,
     pub use_dns: bool,
-    pub proxy_server_addr: String
+    pub proxy_server_addr: String,
 }
 
 #[cfg(test)]

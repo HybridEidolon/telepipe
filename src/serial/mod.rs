@@ -125,7 +125,7 @@ impl Serial for i64 {
 impl Serial for bool {
     #[inline(always)]
     fn serialize<W: Write>(&self, mut write: W) -> Result<(), io::Error> {
-        try!(write.write_u8(if *self {1} else {0}));
+        try!(write.write_u8(if *self { 1 } else { 0 }));
         Ok(())
     }
     #[inline(always)]

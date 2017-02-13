@@ -25,7 +25,10 @@ pub fn read_ascii_len<R: Read>(len: u32, mut src: R) -> io::Result<String> {
     debug!("decoding string truncated to {} from {}", end, len);
     match ASCII.decode(&r[..end], Replace) {
         Ok(s) => Ok(s),
-        Err(e) => Err(io::Error::new(io::ErrorKind::Other, format!("Unable decode ascii: {:?}", e)))
+        Err(e) => {
+            Err(io::Error::new(io::ErrorKind::Other,
+                               format!("Unable decode ascii: {:?}", e)))
+        }
     }
 }
 
@@ -36,7 +39,10 @@ pub fn write_ascii_len<W: Write>(s: &str, len: usize, mut dst: W) -> io::Result<
 
     let r = match ASCII.encode(s, Replace) {
         Ok(s) => s,
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Unable to encode ASCII: {:?}", e)))
+        Err(e) => {
+            return Err(io::Error::new(io::ErrorKind::Other,
+                                      format!("Unable to encode ASCII: {:?}", e)))
+        }
     };
 
     let padding: isize = len as isize - r.len() as isize;
@@ -45,7 +51,9 @@ pub fn write_ascii_len<W: Write>(s: &str, len: usize, mut dst: W) -> io::Result<
         try!(dst.write_all(&r[..len]));
         Ok(())
     } else {
-        debug!("encoding string padded to {} from {}", len, len as isize - padding);
+        debug!("encoding string padded to {} from {}",
+               len,
+               len as isize - padding);
         try!(dst.write_all(&r[..]));
         try!(dst.write_all(&vec![0u8; padding as usize]));
         Ok(())
@@ -73,12 +81,15 @@ pub fn read_utf16<R: Read>(mut src: R) -> io::Result<String> {
     }
 
     if buf.len() == 0 {
-        return Ok("".to_string())
+        return Ok("".to_string());
     }
 
     let r = match UTF_16LE.decode(&buf[..], Replace) {
         Ok(s) => s,
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Unable to decode utf16: {:?}", e)))
+        Err(e) => {
+            return Err(io::Error::new(io::ErrorKind::Other,
+                                      format!("Unable to decode utf16: {:?}", e)))
+        }
     };
     Ok(r)
 }
@@ -90,7 +101,10 @@ pub fn write_utf16<W: Write>(s: &str, mut dst: W) -> io::Result<()> {
 
     let mut r = match UTF_16LE.encode(s, Replace) {
         Ok(s) => s,
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Unable to encode utf16: {:?}", e)))
+        Err(e) => {
+            return Err(io::Error::new(io::ErrorKind::Other,
+                                      format!("Unable to encode utf16: {:?}", e)))
+        }
     };
     r.push(0);
     r.push(0);
@@ -115,18 +129,21 @@ pub fn read_utf16_len<R: Read>(len: usize, mut src: R) -> io::Result<String> {
             nulls += 1;
             if nulls == 2 {
                 end = i;
-                break
+                break;
             }
         } else {
             nulls = 0;
         }
     }
     if end == 1 {
-        return Ok("".to_string())
+        return Ok("".to_string());
     }
     match UTF_16LE.decode(&r[..end], Replace) {
         Ok(s) => Ok(s),
-        Err(e) => Err(io::Error::new(io::ErrorKind::Other, format!("Unable decode utf16: {:?}", e)))
+        Err(e) => {
+            Err(io::Error::new(io::ErrorKind::Other,
+                               format!("Unable decode utf16: {:?}", e)))
+        }
     }
 }
 
@@ -139,7 +156,10 @@ pub fn write_utf16_len(s: &str, len: usize, dst: &mut Write) -> io::Result<()> {
 
     let r = match UTF_16LE.encode(s, Replace) {
         Ok(s) => s,
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Unable to encode utf16: {:?}", e)))
+        Err(e) => {
+            return Err(io::Error::new(io::ErrorKind::Other,
+                                      format!("Unable to encode utf16: {:?}", e)))
+        }
     };
 
     let padding: isize = real_len as isize - r.len() as isize;
@@ -162,7 +182,10 @@ pub fn read_array<T: Serial + Default, R: Read>(len: usize, mut src: R) -> io::R
     Ok(r)
 }
 
-pub fn write_array<T: Serial + Default, W: Write>(sl: &[T], len: usize, mut dst: W) -> io::Result<()> {
+pub fn write_array<T: Serial + Default, W: Write>(sl: &[T],
+                                                  len: usize,
+                                                  mut dst: W)
+                                                  -> io::Result<()> {
     if sl.len() > len as usize {
         warn!("Slice is larger than desired length, writing truncated");
         for i in sl.iter().take(len) {

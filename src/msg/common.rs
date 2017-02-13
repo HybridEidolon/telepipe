@@ -7,17 +7,17 @@ use byteorder::{LittleEndian as LE, BigEndian as BE, ReadBytesExt, WriteBytesExt
 use serial::*;
 use serial::util::*;
 
-pub static LOGIN_WELCOME_COPYRIGHT: &'static str =
-    "DreamCast Port Map. Copyright SEGA Enterprises. 1999";
+pub static LOGIN_WELCOME_COPYRIGHT: &'static str = "DreamCast Port Map. Copyright SEGA \
+                                                    Enterprises. 1999";
 
-pub static SHIP_WELCOME_COPYRIGHT: &'static str =
-    "DreamCast Lobby Server. Copyright SEGA Enterprises. 1999";
+pub static SHIP_WELCOME_COPYRIGHT: &'static str = "DreamCast Lobby Server. Copyright SEGA \
+                                                   Enterprises. 1999";
 
 #[derive(Clone, Debug)]
 pub struct Welcome {
     pub copyright: String,
     pub server_seed: u32,
-    pub client_seed: u32
+    pub client_seed: u32,
 }
 
 impl Default for Welcome {
@@ -25,7 +25,7 @@ impl Default for Welcome {
         Welcome {
             copyright: SHIP_WELCOME_COPYRIGHT.to_string(),
             server_seed: 0,
-            client_seed: 0
+            client_seed: 0,
         }
     }
 }
@@ -45,14 +45,14 @@ impl Serial for Welcome {
         Ok(Welcome {
             copyright: copyright,
             server_seed: server_seed,
-            client_seed: client_seed
+            client_seed: client_seed,
         })
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Redirect4 {
-    pub socket_addr: SocketAddrV4
+    pub socket_addr: SocketAddrV4,
 }
 
 impl Serial for Redirect4 {
@@ -71,23 +71,19 @@ impl Serial for Redirect4 {
         let port = try!(Serial::deserialize(&mut r));
         try!(r.read_u16::<LE>());
         let socket_addr = SocketAddrV4::new(ip, port);
-        Ok(Redirect4 {
-            socket_addr: socket_addr
-        })
+        Ok(Redirect4 { socket_addr: socket_addr })
     }
 }
 
 impl Default for Redirect4 {
     fn default() -> Redirect4 {
-        Redirect4 {
-            socket_addr: SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 80)
-        }
+        Redirect4 { socket_addr: SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 80) }
     }
 }
 
 #[derive(Clone, Debug)]
 pub struct Redirect6 {
-    pub socket_addr: SocketAddrV6
+    pub socket_addr: SocketAddrV6,
 }
 
 impl Serial for Redirect6 {
@@ -108,16 +104,14 @@ impl Serial for Redirect6 {
         try!(r.read_u16::<LE>());
         let ip: Ipv6Addr = ip_buf.into();
         let socket_addr = SocketAddrV6::new(ip, port, 0, 0xe);
-        Ok(Redirect6 {
-            socket_addr: socket_addr
-        })
+        Ok(Redirect6 { socket_addr: socket_addr })
     }
 }
 
 impl Default for Redirect6 {
     fn default() -> Redirect6 {
         Redirect6 {
-            socket_addr: SocketAddrV6::new(Ipv4Addr::new(127, 0, 0, 1).to_ipv6_mapped(), 80, 0, 0)
+            socket_addr: SocketAddrV6::new(Ipv4Addr::new(127, 0, 0, 1).to_ipv6_mapped(), 80, 0, 0),
         }
     }
 }

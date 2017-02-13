@@ -1,6 +1,7 @@
 extern crate byteorder;
 extern crate encoding;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 extern crate resolve;
 extern crate rand;
@@ -40,8 +41,7 @@ fn main() {
             .long("config")
             .value_name("PATH")
             .help("Sets the config file.")
-            .default_value("telepipe.toml")
-        )
+            .default_value("telepipe.toml"))
         .get_matches();
 
     let config = matches.value_of("config").unwrap();
@@ -55,7 +55,7 @@ fn main() {
         Some(c) => c,
         None => {
             println!("The config file is incorrect. Please correct it.");
-            return
+            return;
         }
     };
 
@@ -67,29 +67,34 @@ fn main() {
             Err(e) => {
                 println!("An error binding the DNS server occurred: {}", e);
                 if e.kind() == io::ErrorKind::AddrNotAvailable {
-                    println!("If you are trying to play in Dolphin, it is likely that you have not initialized the TAP adapter yet. Please make sure to install and setup your TAP adapter and wait until the 'Connecting to DNS Server' prompt in-game before running this program.");
+                    println!("If you are trying to play in Dolphin, it is likely that you have \
+                              not initialized the TAP adapter yet. Please make sure to install \
+                              and setup your TAP adapter and wait until the 'Connecting to DNS \
+                              Server' prompt in-game before running this program.");
                 }
                 util::pause().unwrap();
-                return
+                return;
             }
         };
         let proxy_server_addr = Ipv4Addr::from_str(config.proxy_server_addr.as_str()).unwrap();
-        thread::spawn(move || {
-            dns::dns_thread(sock, proxy_server_addr);
-        });
+        thread::spawn(move || { dns::dns_thread(sock, proxy_server_addr); });
     }
 
     for (local, server) in config.listen_ports {
-        match spawn_new_session((config.bind_addr.as_str(), local), (config.server_addr.as_str(), server), config.proxy_server_addr.clone(), config.bind_addr.clone(), false) {
+        match spawn_new_session((config.bind_addr.as_str(), local),
+                                (config.server_addr.as_str(), server),
+                                config.proxy_server_addr.clone(),
+                                config.bind_addr.clone(),
+                                false) {
             Err(e) => {
                 println!("An error occurred: {}", e);
                 match e.kind() {
-                    _ => println!("{:?}", e)
+                    _ => println!("{:?}", e),
                 }
                 util::pause().unwrap();
-                return
-            },
-            _ => ()
+                return;
+            }
+            _ => (),
         }
     }
 

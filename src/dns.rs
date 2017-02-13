@@ -16,7 +16,10 @@ pub fn dns_thread(socket: DnsSocket, server_addr: Ipv4Addr) {
                 mm.header.id = m.header.id;
                 mm.header.qr = Qr::Response;
                 mm.header;
-                let mut resource = Resource::new("gc01.st-pso.games.sega.net".to_string(), RecordType::A, Class::Internet, 59);
+                let mut resource = Resource::new("gc01.st-pso.games.sega.net".to_string(),
+                                                 RecordType::A,
+                                                 Class::Internet,
+                                                 59);
                 resource.write_rdata(&record::A { address: server_addr }).unwrap();
                 mm.answer = vec![resource.clone()];
                 mm.authority = vec![resource.clone()];
@@ -24,7 +27,7 @@ pub fn dns_thread(socket: DnsSocket, server_addr: Ipv4Addr) {
                 if let Err(_) = socket.send_message(&mm, addr) {
                     error!("Error occurred sending response in dns thread");
                 }
-            },
+            }
             Err(_) => {
                 error!("Error occurred in dns thread");
                 break;

@@ -17,7 +17,7 @@ pub enum Msg {
     ShipWelcome(u8, Welcome),
     Redirect4(Redirect4),
     Redirect6(Redirect6),
-    Type05Disconnect
+    Type05Disconnect,
 }
 
 impl Serial for Msg {
@@ -31,17 +31,17 @@ impl Serial for Msg {
                 code = 0x17;
                 flags = *f;
                 try!(pl.serialize(&mut cursor));
-            },
+            }
             &Msg::ShipWelcome(ref f, ref pl) => {
                 code = 0x02;
                 flags = *f;
                 try!(pl.serialize(&mut cursor));
-            },
+            }
             &Msg::Redirect4(ref r) => {
                 code = 0x19;
                 flags = 0;
                 try!(r.serialize(&mut cursor));
-            },
+            }
             &Msg::Redirect6(ref r) => {
                 code = 0x19;
                 flags = 6;
@@ -51,7 +51,7 @@ impl Serial for Msg {
                 code = *c;
                 flags = *f;
                 try!(cursor.write_all(b));
-            },
+            }
             &Msg::Type05Disconnect => {
                 code = 0x05;
                 flags = 0;
@@ -63,7 +63,11 @@ impl Serial for Msg {
         let buf_len = buf.len() + 4;
         buf.append(&mut vec![0; round_up_remainder(buf_len as u16, 4) as usize]);
 
-        debug!("Serializing msg: ty={} flags={} size={} size_as_written={}", code, flags, buf_len, round_up(buf_len as u16, 4));
+        debug!("Serializing msg: ty={} flags={} size={} size_as_written={}",
+               code,
+               flags,
+               buf_len,
+               round_up(buf_len as u16, 4));
         try!(w.write_u8(code));
         try!(w.write_u8(flags));
         try!(w.write_u16::<LE>(round_up(buf_len as u16, 4)));
@@ -76,7 +80,11 @@ impl Serial for Msg {
         let code = try!(r.read_u8());
         let flags = try!(r.read_u8());
         let size_verbatim = try!(r.read_u16::<LE>());
-        let size = if size_verbatim <= 4 { 0 } else { round_up(size_verbatim - 4, 4) };
+        let size = if size_verbatim <= 4 {
+            0
+        } else {
+            round_up(size_verbatim - 4, 4)
+        };
         let mut buf: Vec<u8> = vec![0; size as usize];
         try!(r.read_exact(&mut buf));
 
@@ -91,7 +99,7 @@ impl Serial for Msg {
                     Msg::Redirect4(try!(Serial::deserialize(&mut Cursor::new(buf))))
                 }
             }
-            _    => Msg::Unknown(code, flags, buf)
+            _ => Msg::Unknown(code, flags, buf),
         };
 
         Ok(ret)
@@ -107,11 +115,7 @@ pub fn round_up(val: u16, of: u16) -> u16 {
 /// Get the amount required to round up a value to a multiple of `of`.
 #[inline(always)]
 pub fn round_up_remainder(val: u16, of: u16) -> u16 {
-    if val % of == 0 {
-        0
-    } else {
-        of - (val % of)
-    }
+    if val % of == 0 { 0 } else { of - (val % of) }
 }
 
 

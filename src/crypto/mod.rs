@@ -10,7 +10,7 @@ mod test;
 pub struct Cipher {
     pos: usize,
     keys: Vec<u32>,
-    seed: u32
+    seed: u32,
 }
 
 impl Cipher {
@@ -18,7 +18,7 @@ impl Cipher {
         let mut ret = Cipher {
             pos: 0,
             keys: vec![0; NUM_KEYS],
-            seed: seed
+            seed: seed,
         };
 
         debug!("Initial seed: {}", seed);
@@ -28,18 +28,22 @@ impl Cipher {
         ret
     }
 
-    pub fn seed(&self) -> u32 { self.seed }
+    pub fn seed(&self) -> u32 {
+        self.seed
+    }
 
-    pub fn keys(&self) -> &[u32] { &self.keys[..] }
+    pub fn keys(&self) -> &[u32] {
+        &self.keys[..]
+    }
 
     /// Use the cipher over the given buffer, mutating in-place, and updating
     /// the cipher state in the process. buf must be a multiple of 4.
     pub fn codec(&mut self, buf: &mut [u8]) -> Result<(), CodecError> {
         if buf.len() % 4 != 0 {
-            return Err(CodecError::IllegalBufferSize)
+            return Err(CodecError::IllegalBufferSize);
         }
         if buf.len() == 0 {
-            return Ok(())
+            return Ok(());
         }
 
         debug!("Codecing {} words", buf.len() / 4);
@@ -93,7 +97,9 @@ impl Cipher {
         self.pos += 1;
 
         while self.pos != 521 {
-            let r = (((W(self.keys[source1]) << 23) ^ (W(self.keys[source2]) >> 9)) ^ (W(self.keys[source3]))).0;
+            let r = (((W(self.keys[source1]) << 23) ^ (W(self.keys[source2]) >> 9)) ^
+                     (W(self.keys[source3])))
+                .0;
             self.keys[self.pos] = r;
             self.pos += 1;
             source1 += 1;
@@ -150,5 +156,5 @@ impl Cipher {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CodecError {
     /// The buffer given was either size 0 or not a multiple of 4.
-    IllegalBufferSize
+    IllegalBufferSize,
 }
