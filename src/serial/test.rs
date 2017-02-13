@@ -4,7 +4,7 @@ use super::*;
 
 /// Multi-byte integers should serialize as little endian.
 #[test]
-fn test_little_endian_integers() {
+fn little_endian_integers() {
     let v = 1u16;
     let mut cursor = Cursor::new(Vec::new());
     v.serialize(&mut cursor).unwrap();

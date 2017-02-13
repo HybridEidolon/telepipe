@@ -4,7 +4,7 @@ use serial::Serial;
 use super::*;
 
 #[test]
-fn test_msg_serial_size() {
+fn msg_serial_size() {
     let msg = Msg::Unknown(0, 0, vec![0; 20]);
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
@@ -13,7 +13,7 @@ fn test_msg_serial_size() {
 }
 
 #[test]
-fn test_msg_serial_padding() {
+fn msg_serial_padding() {
     let msg = Msg::Unknown(0, 0, vec![0; 21]);
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
@@ -40,7 +40,7 @@ fn test_msg_serial_padding() {
 }
 
 #[test]
-fn test_welcome_size() {
+fn welcome_size() {
     let msg = Msg::LoginWelcome(0, Default::default());
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
@@ -49,7 +49,7 @@ fn test_welcome_size() {
 }
 
 #[test]
-fn test_welcome_content() {
+fn welcome_content() {
     let msg = Msg::LoginWelcome(0, Default::default());
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
@@ -58,7 +58,7 @@ fn test_welcome_content() {
 }
 
 #[test]
-fn test_redirect4_size() {
+fn redirect4_size() {
     let msg = Msg::Redirect4(Default::default());
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
@@ -67,7 +67,7 @@ fn test_redirect4_size() {
 }
 
 #[test]
-fn test_redirect4_contents() {
+fn redirect4_contents() {
     let msg = Msg::Redirect4(Default::default());
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
@@ -77,10 +77,19 @@ fn test_redirect4_contents() {
 }
 
 #[test]
-fn test_redirect6_size() {
+fn redirect6_size() {
     let msg = Msg::Redirect6(Default::default());
     let mut cursor = Cursor::new(Vec::new());
     msg.serialize(&mut cursor).unwrap();
     let buf: Vec<u8> = cursor.into_inner();
     assert_eq!(buf.len(), 0x0018);
+}
+
+#[test]
+fn hlcheck_size() {
+    let msg = Msg::HlCheck(Default::default());
+    let mut cursor = Cursor::new(Vec::new());
+    msg.serialize(&mut cursor).unwrap();
+    let buf: Vec<u8> = cursor.into_inner();
+    assert_eq!(buf.len(), 224);
 }

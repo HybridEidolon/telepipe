@@ -76,7 +76,7 @@ static EXPECTED: &'static [u32] =
       1918438384, 1894810992, 3467936860, 2215827450, 2977928829, 3172639288, 0, 0, 0, 0, 0, 0, 0];
 
 #[test]
-fn test_create_crypto() {
+fn create_crypto() {
     // Tests to ensure the key table generated during initialization matches an expected table,
     // given a specific seed.
     let seed = 0;
@@ -90,7 +90,7 @@ fn test_create_crypto() {
 }
 
 #[test]
-fn test_crypto_symmetricity() {
+fn crypto_symmetricity() {
     // Tests to ensure the cipher has the symmetric property.
     let seed = 100;
     let mut cipher = Cipher::new(seed);
@@ -105,7 +105,7 @@ fn test_crypto_symmetricity() {
 }
 
 #[test]
-fn test_crypto_correct_ciphertext() {
+fn crypto_correct_ciphertext() {
     // Tests to ensure the cipher produces correct ciphertext from a given seed.
     let seed = 82376;
     let mut cipher = Cipher::new(seed);
@@ -119,7 +119,7 @@ fn test_crypto_correct_ciphertext() {
 }
 
 #[test]
-fn test_codec_buffer_size() {
+fn codec_buffer_size() {
     let seed = 512;
     let mut cipher = Cipher::new(seed);
 

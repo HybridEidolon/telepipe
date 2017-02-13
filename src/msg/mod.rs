@@ -7,8 +7,10 @@ use serial::Serial;
 use byteorder::{LittleEndian as LE, ReadBytesExt, WriteBytesExt};
 
 pub mod common;
+pub mod login;
 
 use self::common::*;
+use self::login::*;
 
 #[derive(Clone, Debug)]
 pub enum Msg {
@@ -18,6 +20,7 @@ pub enum Msg {
     Redirect4(Redirect4),
     Redirect6(Redirect6),
     Type05Disconnect,
+    HlCheck(HlCheck)
 }
 
 impl Serial for Msg {
@@ -55,6 +58,11 @@ impl Serial for Msg {
             &Msg::Type05Disconnect => {
                 code = 0x05;
                 flags = 0;
+            }
+            &Msg::HlCheck(ref b) => {
+                code = 0xDB;
+                flags = 0;
+                try!(b.serialize(&mut cursor));
             }
             //_ => unimplemented!()
         }
@@ -99,6 +107,7 @@ impl Serial for Msg {
                     Msg::Redirect4(try!(Serial::deserialize(&mut Cursor::new(buf))))
                 }
             }
+            0xDB => Msg::HlCheck(try!(Serial::deserialize(&mut Cursor::new(buf)))),
             _ => Msg::Unknown(code, flags, buf),
         };
 
